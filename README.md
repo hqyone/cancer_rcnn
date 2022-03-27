@@ -33,7 +33,7 @@ CPU: i7-960@3.20GHz quad-core. Memory: 16GB. Graphics card: GeForce GTX 1080 Ti 
 *   [predict.cfg](code/cell_classification/config/predict.py) Config file for predicting
 ### patient classfication
 *   [patient_classifier.ipynb](code/patient_classification/patient_classifier.ipynb) Python notebook to make ML models (Random forest, Logistic regression, SVM)
-*   [xgbools.ipynb](code/cell_classification/script/xgbools.ipynb) Python notebook to make XGBoost model
+*   [xgbools.ipynb](code/cell_classification/script/xgbools.ipynb) Python notebook to make XGBoost model.
 
 ## 5. Running
 * Download  [500_tct_labeled_images](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) to a dictory (e.g. ./cc_tct_labeled_500_v1)
@@ -50,7 +50,7 @@ python hpv.py detect --config ./config/predict.cfg
 * Splict the training dataset into serveral (e.g. 3) directories 
 * Make train.cfg and predict.cfg for each interation
 ```
-# 
+# Using initial model (e.g. coco model) to do the first training step
 python hpv.py train --config ./config/train_1.cfg
 # using the last model for first training procedure to do predict
 python hpv.py detect --config ./config/predict_1.cfg
@@ -65,8 +65,8 @@ python hpv.py detect --config ./config/predict_2.cfg
 * Run [PR-Curve.py](code/cell_classification/script/PR-Curve.py) to calculate the precision of the model using test data
 
 ### 5.4 Patient classfication
-* Run prediction using TCT whole slide images (WSI)
-
+* Run prediction using TCT whole slide images (WSI) to get cell classification results such as [yang-211-model-1.tsv](data/patent_predict/yang-211-model-T1.tsv)
+* Run [patient_classifier.ipynb](code/patient_classification/patient_classifier.ipynb) and [xgbools.ipynb](code/cell_classification/script/xgbools.ipynb) to do patient classification.
 ## License
 Copyright (c) 2020 Quanyuan He Ph.D.
 

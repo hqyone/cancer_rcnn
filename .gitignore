@@ -5,4 +5,5 @@ __init__.py
 
 code/model/*
 
-data/
+data/cc_tct_labeled_500_v1/
+data/logs/
