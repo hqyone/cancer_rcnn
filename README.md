@@ -2,7 +2,7 @@
 ![Instance Segmentation Sample](title.jpg)
 
 Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical models for cervical cancer screening.
-## 1. Evironment Settings
+## 1. Environment Settings
 * Install Labelme  (https://github.com/wkentaro/labelme)
 * Configure tensorflow 1.14,  [tf_config.ipynb](code/tf_config.ipynb) shows how to setup tensorflow_gpu-1.14 on a PC machine.
 * Clone this github repository to local machine.
