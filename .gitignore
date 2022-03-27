@@ -1,5 +1,5 @@
 *.pyc
 
-code/model/
+code/model/*
 
 data/
