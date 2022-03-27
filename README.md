@@ -12,10 +12,10 @@ Cervical cancer (CC) is the fourth most common malignant tumor among women world
 
 
 # MaskRCNN Models
-[T1_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
-[A1_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
-[A2_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
-[A3_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
+* [T1_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
+* [A1_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
+* [A2_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
+* [A3_Model](https://drive.google.com/file/d/1f-9OFKZjKRsQNmOB1nLykmdV6jCZ5-uK/view?usp=sharing) 
 
 # Code
 ## Cell classification
