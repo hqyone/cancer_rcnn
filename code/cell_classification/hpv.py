@@ -461,26 +461,15 @@ if __name__ == '__main__':
             print(f"The image datasource ({data_source_dir}) is not accessable")
     elif args.command == "detect":
         # # Read the config
-        # ds_dir = config['Input']['datasource_dir']
-        # subset =  config['Input']['subset']
-        # weight_file = config['Input']['weight_file']
-        # print("Weights: ", weight_file)
-        # out_dir = config['Output']['out_dir']
-        # log_dir = config['Input']['log_dir']
-        # # Create model
-        # model_cfg = NucleusInferenceConfig()
-        # model = modellib.MaskRCNN(mode="inference", config=model_cfg, model_dir=log_dir)
-        # model.load_weights(weight_file, by_name=True)
-        # # run detection
-        # detect(model, ds_dir, subset, out_dir)
-
         image_source_dir = config['Input']['image_source_dir']
         weight_file = config['Input']['weight_file']
+        image_ext = config['Input']['image_ext']
         out_dir = config['Output']['out_dir']
+        # Run prediction
         model_cfg = NucleusInferenceConfig()
         model = modellib.MaskRCNN(mode="inference", config=model_cfg, model_dir="./")
         model.load_weights(weight_file, by_name=True)
-        predictDirToJson(image_source_dir, model, out_dir)
+        predictDirToJson(image_source_dir, model, out_dir,ext=image_ext)
     else:
         print("'{}' is not recognized. "
               "Use 'train' or 'detect'".format(args.command))
