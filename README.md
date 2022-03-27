@@ -67,7 +67,7 @@ python hpv.py detect --config ./config/predict_2.cfg
 ### 5.4 Patient classfication
 * Run prediction using TCT whole slide images (WSI) to get cell classification results such as [yang-211-model-1.tsv](data/patent_predict/yang-211-model-T1.tsv)
 * Run [patient_classifier.ipynb](code/patient_classification/patient_classifier.ipynb) and [xgbools.ipynb](code/cell_classification/script/xgbools.ipynb) to do patient classification.
-## License
+## 6. License
 Copyright (c) 2020 Quanyuan He Ph.D.
 
 Contact: [hqyone@hotmail.com](mailto:hqyone@hotmail.com)
@@ -75,5 +75,5 @@ Contact: [hqyone@hotmail.com](mailto:hqyone@hotmail.com)
 Released under GPLv3. See
 [license](LICENSE.txt) for details.
 
-## 11. Disclaimer
+## 7. Disclaimer
 This software is supplied 'as is' without any warranty or guarantee of support. The developers are not responsible for its use, misuse, or functionality. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability arising from, out of, or in connection with this software.
