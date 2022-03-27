@@ -1,7 +1,10 @@
 # AI model for cervical cancer screening and diagnosis 
 ![Instance Segmentation Sample](title.jpg)
 
-Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical models for cervical cancer screening.
+Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical model for cervical cancer screening.
+* References:
+    * Xueguang Li, Mingyue Du et al. AI model for cervical cancer screening and diagnosis using active learning strategy (submitted)
+
 ## 1. Environment Settings
 * Install Labelme  (https://github.com/wkentaro/labelme)
 * Install and Configuring tensorflow 1.14,  [tf_config.ipynb](code/tf_config.ipynb) shows how to setup tensorflow_gpu-1.14 on a PC machine.
@@ -27,12 +30,12 @@ CPU: i7-960@3.20GHz quad-core. Memory: 16GB. Graphics card: GeForce GTX 1080 Ti 
 * [A3_Model (171M)](https://drive.google.com/file/d/1fEesGkBTMhDQ8jqXx1R3m4Ja_zSep98Y/view?usp=sharing) from the second iteration of  active learning
 
 ##  4. Code
-### Cell classification
+### 4.1 Cell classification
 *   [hpv.py](code/cell_classification/hpv.py) Main script to launcth RCNN model training and prediction
 *   [PR-Curve.py](code/cell_classification/script/PR-Curve.py) Script to calculate the precision and draw the PR Curves
 *   [train.cfg](code/cell_classification/config/train.py) Config file for training model
 *   [predict.cfg](code/cell_classification/config/predict.py) Config file for predicting
-### patient classfication
+### 4.2 patient classfication
 *   [patient_classifier.ipynb](code/patient_classification/patient_classifier.ipynb) Python notebook to make ML models (Random forest, Logistic regression, SVM)
 *   [xgbools.ipynb](code/cell_classification/script/xgbools.ipynb) Python notebook to make XGBoost model.
 
