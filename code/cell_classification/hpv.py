@@ -55,7 +55,7 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
 
-ROOT_DIR = os.path.abspath("../../")  # 指定根目录
+ROOT_DIR = os.path.abspath("../../../")  # 指定根目录
 
 # 导入Mask RCNN
 sys.path.append(ROOT_DIR)  # 查找库的本地版本
