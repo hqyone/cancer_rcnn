@@ -1,7 +1,7 @@
 # AI model for cervical cancer screening and diagnosis 
 ![Instance Segmentation Sample](title.jpg)
 
-Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical cancer screening method using the whole slide images (WSI) of thinprep cytology test (TCT) slides from 211 cervical cancer and 189 normal patients. To partially solve the problem of high cost and low efficiency of image labeling manually, we used an active learning strategy to promote model build efficiency and accuracy. The sensitivity, specificity, and accuracy of the best models were 100%, 98.5%, and 100% for CC patient identification, respectively. The results also demonstrated that the active learning strategy was superior to the traditional supervised learning strategy in decreasing the cost and enhancing the quality of image labeling has the potential to be applied to the pathological diagnosis of various cancer types.
+Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical models for cervical cancer screening.
 ## 1. Evironment Settings
 * Install Labelme  (https://github.com/wkentaro/labelme)
 * Configure tensorflow 1.14,  [tf_config.ipynb](code/tf_config.ipynb) shows how to setup tensorflow_gpu-1.14 on a PC machine.
@@ -70,7 +70,7 @@ python hpv.py detect --config ./config/predict_2.cfg
 ## 6. License
 Copyright (c) 2020 Quanyuan He Ph.D.
 
-Contact: [hqyone@hotmail.com](mailto:hqyone@hotmail.com)
+Contact: Dr. [Quanyuan He ](mailto:hqyone@hotmail.com), Dr. [Junhua Zhou](mailto:zhoujunhua@hunnu.edu.cn)
 
 Released under GPLv3. See
 [license](LICENSE.txt) for details.
