@@ -1,4 +1,6 @@
 *.pyc
+*.h5
+
 __init__.py
 
 code/model/*
