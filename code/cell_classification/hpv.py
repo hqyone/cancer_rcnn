@@ -36,17 +36,21 @@ if __name__ == '__main__':
 
     # Agg backend runs without a display
     matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os
 import sys
 import json
 import datetime
 import numpy as np
 import skimage.io
+import time
 from imgaug import augmenters as iaa
+from skimage.transform import resize
+import configparser
 
 import tensorflow as tf
 import keras
+
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
@@ -59,12 +63,18 @@ from mrcnn.config import Config
 from mrcnn import utils
 from mrcnn import model as modellib
 from mrcnn import visualize
-import time
+from image_utilities import predictDirToJson, json2masksInDirectory, getTrainValImageIDs
+
+
+
+DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
+
 COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "F:/Mask_RCNN/logs/hpv20210105T1517/mask_rcnn_hpv_0600.h5")
 
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 RESULTS_DIR = os.path.join(ROOT_DIR, "results/hpv/")
+
 # RESULTS_DIR = os.path.join(ROOT_DIR, "logs")   # 指定训练好的权重路径
 # 是否可以  RESULTS_DIR = os.path.join(F:\0_LXG\Mask_RCNN,"logs")
 # 或者  RESULTS_DIR = 'F:\0_LXG\Mask_RCNN'
@@ -82,18 +92,7 @@ RESULTS_DIR = os.path.join(ROOT_DIR, "results/hpv/")
 #            VAL_IMAGE_IDS.append("\""+val+"\"")
 
 VAL_IMAGE_IDS = [
-    "0",
-    "1",
-    "2",
-    "3",
-    "4"
-    "5",
-    "6",
-    "7",
-    "8", "9", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100",
-    "200", "210", "220", "230", "240", "250", "260", "270", "280", "290", "300",
-    "310", "320", "330", "340", "350", "360", "370", "380", "390", "400",
-    "410", "420", "430", "440", "450", "460", "470", "471", "472", "473", "499"
+    "1456","1458",'1462'
 ]
 # VAL_IMAGE_IDS = []
 # for i in range(0, 950):
@@ -105,6 +104,8 @@ class NucleusConfig(Config):
     # Give the configuration a recognizable name
     NAME = "hpv"
 
+    LEARNING_RATE=0.1
+
     # Adjust depending on your GPU memory
     IMAGES_PER_GPU = 1
 
@@ -114,7 +115,7 @@ class NucleusConfig(Config):
     #     STEPS_PER_EPOCH = (657 - len(VAL_IMAGE_IDS)) // IMAGES_PER_GPU
     #     VALIDATION_STEPS = max(1, len(VAL_IMAGE_IDS) // IMAGES_PER_GPU)
 
-    STEPS_PER_EPOCH = (500) // IMAGES_PER_GPU  # 依据图片数量分配GPU
+    STEPS_PER_EPOCH = (200) // IMAGES_PER_GPU  # 依据图片数量分配GPU
     VALIDATION_STEPS = max(1, len(VAL_IMAGE_IDS) // IMAGES_PER_GPU)
 
     DETECTION_MIN_CONFIDENCE = 0
@@ -169,45 +170,16 @@ class NucleusInferenceConfig(NucleusConfig):
 # 加载数据
 ################
 class NucleusDataset(utils.Dataset):
-
-    def load_nucleus(self, dataset_dir, subset):
-        """Load a subset of the nuclei dataset.
-
-        dataset_dir: Root directory of the dataset
-        subset: Subset to load. Either the name of the sub-directory,
-                such as stage1_train, stage1_test, ...etc. or, one of:
-                * train: stage1_train excluding validation images
-                * val: validation images from VAL_IMAGE_IDS
-        """
-        # Add classes. We have one class.
-        # Naming the dataset nucleus, and the class nucleus
+    def load_nucleus(self, dataset_dir, image_ids):
         self.add_class("nucleus", 1, "yin")
         self.add_class("nucleus", 2, "yin-yang")
         self.add_class("nucleus", 3, "yang")
-
-        # Which subset?
-        # "val": use hard-coded list above
-        # "train": use data from stage1_train minus the hard-coded list above
-        # else: use the data from the specified sub-directory
-        assert subset in ["train", "val", "stage1_train", "stage1_test", "stage2_test"]
-        subset_dir = "stage1_train" if subset in ["train", "val"] else subset
-        dataset_dir = os.path.join(dataset_dir, subset_dir)
-        if subset == "val":
-            image_ids = VAL_IMAGE_IDS
-        else:
-            # Get image ids from directory names
-            image_ids = next(os.walk(dataset_dir))[1]
-
-            if subset == "train":
-                image_ids = list(set(image_ids) - set(VAL_IMAGE_IDS))
-                # image_ids = list(set(image_ids))
-
         # Add images
         for image_id in image_ids:
             self.add_image(
                 "nucleus",
                 image_id=image_id,
-                path=os.path.join(dataset_dir, image_id, "images/{}.png".format(image_id)))
+                path=os.path.join(dataset_dir, image_id, "{}.png".format(image_id)))
 
     def load_mask(self, image_id):
         """Generate instance masks for an image.
@@ -218,7 +190,8 @@ class NucleusDataset(utils.Dataset):
         """
         info = self.image_info[image_id]
         # Get mask directory from image path
-        mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+        mask_dir = os.path.join(os.path.dirname(info['path']),"masks")
+        print(str(mask_dir) +"xxxxx")
 
         # Read mask files from .png image
         mask = []
@@ -227,7 +200,12 @@ class NucleusDataset(utils.Dataset):
             if f.endswith(".png"):
                 m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
                 mask.append(m)
-                labels.append(int(f.split('.')[0].split('_')[1]))
+                label_dic={
+                    "yin":1,
+                    "yin-yang":2,
+                    "yang":3,
+                }
+                labels.append(int(label_dic[f.split('.')[0].split('_')[1]]))
         mask = np.stack(mask, axis=-1)
         # Return mask, and array of class IDs of each instance. Since we have
         # one class ID, we return an array of ones
@@ -247,16 +225,17 @@ class NucleusDataset(utils.Dataset):
 #  Training
 ############################################################
 
-def train(model, dataset_dir, subset):
+def train(model, dataset_dir, config, val_image_num=3, head_training_epoch=720, all_training_epoch= 820):
+    (training_Image_IDS, val_Image_IDS)=getTrainValImageIDs(dataset_dir, val_image_num)
     """Train the model."""
     # Training dataset.
     dataset_train = NucleusDataset()
-    dataset_train.load_nucleus(dataset_dir, subset)
+    dataset_train.load_nucleus(dataset_dir, training_Image_IDS)
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = NucleusDataset()
-    dataset_val.load_nucleus(dataset_dir, "val")
+    dataset_val.load_nucleus(dataset_dir, val_Image_IDS)
     dataset_val.prepare()
 
     # Image augmentation
@@ -275,19 +254,20 @@ def train(model, dataset_dir, subset):
 
     # If starting from imagenet, train heads only for a bit
     # since they have random weights
-    print("Train network heads")
-    model.train(dataset_train, dataset_val,
-                learning_rate=config.LEARNING_RATE,
-                epochs=720,
-                augmentation=augmentation,
-                layers='heads')
+    with tf.device(DEVICE):
+        print("Train network heads")
+        model.train(dataset_train, dataset_val,
+                    learning_rate=config.LEARNING_RATE,
+                    epochs=head_training_epoch,
+                    augmentation=augmentation,
+                    layers='heads')
 
-    print("Train all layers")
-    model.train(dataset_train, dataset_val,
-                learning_rate=config.LEARNING_RATE,
-                epochs=820,
-                augmentation=augmentation,
-                layers='all')
+        print("Train all layers")
+        model.train(dataset_train, dataset_val,
+                    learning_rate=config.LEARNING_RATE,
+                    epochs=all_training_epoch,
+                    augmentation=augmentation,
+                    layers='all')
 
 
 ############################################################
@@ -354,16 +334,15 @@ def mask_to_rle(image_id, mask, scores):
 #  Detection
 ############################################################
 
-def detect(model, dataset_dir, subset):
+def detect(model, dataset_dir, subset, out_dir=None):
     """Run detection on images in the given directory."""
     print("Running on {}".format(dataset_dir))
 
-    # Create directory
-    if not os.path.exists(RESULTS_DIR):
-        os.makedirs(RESULTS_DIR)
-    submit_dir = "submit_{:%Y%m%dT%H%M%S}".format(datetime.datetime.now())
-    submit_dir = os.path.join(RESULTS_DIR, submit_dir)
-    os.makedirs(submit_dir)
+    if not out_dir:
+        out_dir = "submit_{:%Y%m%dT%H%M%S}".format(datetime.datetime.now())
+        out_dir = os.path.join("./",out_dir)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
     # Read dataset
     dataset = NucleusDataset()
@@ -373,8 +352,9 @@ def detect(model, dataset_dir, subset):
     submission = []
     for image_id in dataset.image_ids:
         # Load image and run detection
+
         image = dataset.load_image(image_id)
-        print(image_id)
+        
         # picture = "D:\\Desktop\\hpv-test\\test\\xx_best_425_31_36.png"
         # image = skimage.io.imread(picture)
         starttime=time.clock()
@@ -384,6 +364,7 @@ def detect(model, dataset_dir, subset):
         r = model.detect([image], verbose=0)[0]
         # Encode image to RLE. Returns a string of multiple lines
         source_id = dataset.image_info[image_id]["id"]
+        
         # rle = mask_to_rle(source_id, r["masks"], r["scores"])
         # print("r[boxes].shape:", r["rois"].shape)
         # print("用时：",time.clock()-starttime)
@@ -394,7 +375,8 @@ def detect(model, dataset_dir, subset):
             dataset.class_names, r['scores'],
             show_bbox=False, show_mask=False,
             title="Predictions")
-        plt.savefig("{}/{}.png".format(submit_dir, dataset.image_info[image_id]["id"]))
+        print(out_dir)
+        plt.savefig("{}/{}_label.png".format(out_dir, source_id))
 
 
     # Save to csv file
@@ -416,80 +398,90 @@ if __name__ == '__main__':
     parser.add_argument("command",
                         metavar="<command>",
                         help="'train' or 'detect'")
-    parser.add_argument('--dataset', required=False,
-                        metavar="/path/to/dataset/",
-                        help='Root directory of the dataset')
-    parser.add_argument('--weights', required=True,
-                        metavar="/path/to/weights.h5",
-                        help="Path to weights .h5 file or 'coco'")
-    parser.add_argument('--logs', required=False,
-                        default=DEFAULT_LOGS_DIR,
-                        metavar="/path/to/logs/",
-                        help='Logs and checkpoints directory (default=logs/)')
-    parser.add_argument('--subset', required=False,
-                        metavar="Dataset sub-directory",
-                        help="Subset of dataset to run prediction on")
+    parser.add_argument('--config', required=True,
+                        metavar="Config file for training or detect",
+                        help="The config file for runing")
+    # parser.add_argument('--dataset', required=False,
+    #                     metavar="/path/to/dataset/",
+    #                     help='Root directory of the dataset')
+    # parser.add_argument('--weights', required=True,
+    #                     metavar="/path/to/weights.h5",
+    #                     help="Path to weights .h5 file or 'coco'")
+    # parser.add_argument('--logs', required=False,
+    #                     default=DEFAULT_LOGS_DIR,
+    #                     metavar="/path/to/logs/",
+    #                     help='Logs and checkpoints directory (default=logs/)')
+    # parser.add_argument('--subset', required=False,
+    #                     metavar="Dataset sub-directory",
+    #                     help="Subset of dataset to run prediction on")
+
     args = parser.parse_args()
+    print(args)
+    config_file = args.config
+    print(config_file)
+    config = configparser.ConfigParser()
+    config.read(config_file)
 
     # Validate arguments
     if args.command == "train":
-        assert args.dataset, "Argument --dataset is required for training"
+        # Read the config
+        data_source_dir = config['Input']['datasource_dir']
+        val_image_num = int(config['Input']['val_image_num'])
+        head_training_epoch = int(config['Input']['head_training_epoch'])
+        all_training_epoch = int(config['Input']['all_training_epoch'])
+        weight_path = config['Parameters']['weight_file']
+        log_dir = config['Output']['log_dir']
+        if os.path.isdir(data_source_dir):
+            # Create model
+            nc_config = NucleusConfig()
+            model = modellib.MaskRCNN(mode="training", config=nc_config,
+                                    model_dir=log_dir)
+            if  weight_path.lower() == "coco":
+                weight_path = "/home/hqyone/mnt/2tb/github/cancer_rcnn/code/cell_classification/model/mask_rcnn_coco.h5"
+                # Download weights file
+                if not os.path.exists(weight_path):
+                    utils.download_trained_weights(weight_path)
+                # Exclude the last layers because they require a matching
+                # number of classes
+                model.load_weights(weight_path, by_name=True, exclude=[
+                    "mrcnn_class_logits", "mrcnn_bbox_fc",
+                    "mrcnn_bbox", "mrcnn_mask"])
+            else:
+                if weight_path.lower() == "last":
+                    # Find last trained weights
+                    weights_path = model.find_last()
+                elif weight_path.lower() == "imagenet":
+                    # Start from ImageNet trained weights
+                    weights_path = model.get_imagenet_weights()
+                model.load_weights(weights_path, by_name=True)
+            json2masksInDirectory(data_source_dir)
+            nu_config = NucleusConfig()
+            train(model, data_source_dir,nu_config, val_image_num = val_image_num, head_training_epoch=head_training_epoch, all_training_epoch=all_training_epoch)
+        else:
+            print(f"The image datasource ({data_source_dir}) is not accessable")
     elif args.command == "detect":
-        assert args.subset, "Provide --subset to run prediction on"
+        # # Read the config
+        # ds_dir = config['Input']['datasource_dir']
+        # subset =  config['Input']['subset']
+        # weight_file = config['Input']['weight_file']
+        # print("Weights: ", weight_file)
+        # out_dir = config['Output']['out_dir']
+        # log_dir = config['Input']['log_dir']
+        # # Create model
+        # model_cfg = NucleusInferenceConfig()
+        # model = modellib.MaskRCNN(mode="inference", config=model_cfg, model_dir=log_dir)
+        # model.load_weights(weight_file, by_name=True)
+        # # run detection
+        # detect(model, ds_dir, subset, out_dir)
 
-    print("Weights: ", args.weights)
-    print("Dataset: ", args.dataset)
-    if args.subset:
-        print("Subset: ", args.subset)
-    print("Logs: ", args.logs)
-
-    # Configurations
-    if args.command == "train":
-        config = NucleusConfig()
-    else:
-        config = NucleusInferenceConfig()
-    config.display()
-
-    # Create model
-    if args.command == "train":
-        model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=args.logs)
-    else:
-        model = modellib.MaskRCNN(mode="inference", config=config,
-                                  model_dir=args.logs)
-
-    # Select weights file to load
-    if args.weights.lower() == "coco":
-        weights_path = COCO_WEIGHTS_PATH
-        # Download weights file
-        if not os.path.exists(weights_path):
-            utils.download_trained_weights(weights_path)
-    elif args.weights.lower() == "last":
-        # Find last trained weights
-        weights_path = model.find_last()
-    elif args.weights.lower() == "imagenet":
-        # Start from ImageNet trained weights
-        weights_path = model.get_imagenet_weights()
-    else:
-        weights_path = args.weights
-
-    # Load weights
-    print("Loading weights ", weights_path)
-    print(args.weights.lower())
-    if args.weights.lower() == "coco":
-        # Exclude the last layers because they require a matching
-        # number of classes
-        model.load_weights(weights_path, by_name=True, exclude=[
-            "mrcnn_class_logits", "mrcnn_bbox_fc",
-            "mrcnn_bbox", "mrcnn_mask"])
-    else:
-        model.load_weights(weights_path, by_name=True)
-
-    # Train or evaluate
-    if args.command == "train":
-        train(model, args.dataset, args.subset)
-    elif args.command == "detect":
-        detect(model, args.dataset, args.subset)
+        image_source_dir = config['Input']['image_source_dir']
+        weight_file = config['Input']['weight_file']
+        out_dir = config['Output']['out_dir']
+        model_cfg = NucleusInferenceConfig()
+        model = modellib.MaskRCNN(mode="inference", config=model_cfg, model_dir="./")
+        model.load_weights(weight_file, by_name=True)
+        predictDirToJson(image_source_dir, model, out_dir)
     else:
         print("'{}' is not recognized. "
               "Use 'train' or 'detect'".format(args.command))
+        
