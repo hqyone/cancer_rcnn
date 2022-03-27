@@ -4,10 +4,11 @@
 Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical models for cervical cancer screening.
 ## 1. Environment Settings
 * Install Labelme  (https://github.com/wkentaro/labelme)
-* Configure tensorflow 1.14,  [tf_config.ipynb](code/tf_config.ipynb) shows how to setup tensorflow_gpu-1.14 on a PC machine.
-* Clone this github repository to local machine.
+* Install and Configuring tensorflow 1.14,  [tf_config.ipynb](code/tf_config.ipynb) shows how to setup tensorflow_gpu-1.14 on a PC machine.
 * The configuration was tested at PC (Windows 10) and Ubuntu (10.10) workstations, 
 CPU: i7-960@3.20GHz quad-core. Memory: 16GB. Graphics card: GeForce GTX 1080 Ti 11GB and GTX 2080 Ti 11GB
+* Cloning this github repository to local machine.
+* Downloading/Collect testing data (see below)
 
 ## 2. Training Data
 * 500 TCT manually labelled images (200X magnification) which contains at least one cancer cell 
