@@ -449,11 +449,11 @@ if __name__ == '__main__':
             else:
                 if weight_path.lower() == "last":
                     # Find last trained weights
-                    weights_path = model.find_last()
+                    weight_path = model.find_last()
                 elif weight_path.lower() == "imagenet":
                     # Start from ImageNet trained weights
-                    weights_path = model.get_imagenet_weights()
-                model.load_weights(weights_path, by_name=True)
+                    weight_path = model.get_imagenet_weights()
+                model.load_weights(weight_path, by_name=True)
             json2masksInDirectory(data_source_dir)
             nu_config = NucleusConfig()
             train(model, data_source_dir,nu_config, val_image_num = val_image_num, head_training_epoch=head_training_epoch, all_training_epoch=all_training_epoch)
