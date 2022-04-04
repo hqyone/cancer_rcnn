@@ -92,7 +92,7 @@ RESULTS_DIR = os.path.join(ROOT_DIR, "results/hpv/")
 #            VAL_IMAGE_IDS.append("\""+val+"\"")
 
 VAL_IMAGE_IDS = [
-    "1456","1458",'1462'
+    "1456","1458",'1462','ss','s'
 ]
 # VAL_IMAGE_IDS = []
 # for i in range(0, 950):
@@ -104,7 +104,7 @@ class NucleusConfig(Config):
     # Give the configuration a recognizable name
     NAME = "hpv"
 
-    LEARNING_RATE=0.1
+    LEARNING_RATE=0.005  #0.1
 
     # Adjust depending on your GPU memory
     IMAGES_PER_GPU = 1
@@ -116,7 +116,7 @@ class NucleusConfig(Config):
     #     VALIDATION_STEPS = max(1, len(VAL_IMAGE_IDS) // IMAGES_PER_GPU)
 
     STEPS_PER_EPOCH = (200) // IMAGES_PER_GPU  # 依据图片数量分配GPU
-    VALIDATION_STEPS = max(1, len(VAL_IMAGE_IDS) // IMAGES_PER_GPU)
+    VALIDATION_STEPS = max(1, 50) // IMAGES_PER_GPU # len(VAL_IMAGE_IDS) =50
 
     DETECTION_MIN_CONFIDENCE = 0
 
@@ -157,6 +157,13 @@ class NucleusConfig(Config):
 
     # Max number of final detections per image
     DETECTION_MAX_INSTANCES = 400  # 每幅图像最终检测的最大数量
+
+    def loadData(self, datasource_dir, train_Image_IDs, val_Image_IDs):
+        self.train_Image_IDs = train_Image_IDs
+        self.val_Image_IDs = val_Image_IDs
+        self.datasource_dir = datasource_dir
+        self.STEPS_PER_EPOCH = len(train_Image_IDs) // self.IMAGES_PER_GPU  # 依据图片数量分配GPU
+        self.VALIDATION_STEPS = max(1, len(val_Image_IDs) // self.IMAGES_PER_GPU)
 
 
 class NucleusInferenceConfig(NucleusConfig):
@@ -225,17 +232,16 @@ class NucleusDataset(utils.Dataset):
 #  Training
 ############################################################
 
-def train(model, dataset_dir, config, val_image_num=3, head_training_epoch=720, all_training_epoch= 820):
-    (training_Image_IDS, val_Image_IDS)=getTrainValImageIDs(dataset_dir, val_image_num)
+def train(model, config, head_training_epoch=720, all_training_epoch= 820):
     """Train the model."""
     # Training dataset.
     dataset_train = NucleusDataset()
-    dataset_train.load_nucleus(dataset_dir, training_Image_IDS)
+    dataset_train.load_nucleus(config.datasource_dir, config.train_Image_IDs)
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = NucleusDataset()
-    dataset_val.load_nucleus(dataset_dir, val_Image_IDS)
+    dataset_val.load_nucleus(config.datasource_dir, config.val_Image_IDs)
     dataset_val.prepare()
 
     # Image augmentation
@@ -431,9 +437,13 @@ if __name__ == '__main__':
         all_training_epoch = int(config['Input']['all_training_epoch'])
         weight_path = config['Parameters']['weight_file']
         log_dir = config['Output']['log_dir']
+        # create the config object
+        (training_Image_IDS, val_Image_IDS)=getTrainValImageIDs(data_source_dir, val_image_num)
+        nc_config = NucleusConfig()
+        nc_config.loadData(data_source_dir,training_Image_IDS, val_Image_IDS)
+        print(f"Training Images ({len(training_Image_IDS)}), Validate Images ({len(val_Image_IDS)})")
         if os.path.isdir(data_source_dir):
             # Create model
-            nc_config = NucleusConfig()
             model = modellib.MaskRCNN(mode="training", config=nc_config,
                                     model_dir=log_dir)
             if  weight_path.lower() == "coco":
@@ -454,9 +464,9 @@ if __name__ == '__main__':
                     # Start from ImageNet trained weights
                     weight_path = model.get_imagenet_weights()
                 model.load_weights(weight_path, by_name=True)
+            # if json file exist using json file to create mask files
             json2masksInDirectory(data_source_dir)
-            nu_config = NucleusConfig()
-            train(model, data_source_dir,nu_config, val_image_num = val_image_num, head_training_epoch=head_training_epoch, all_training_epoch=all_training_epoch)
+            train(model, nc_config, head_training_epoch=head_training_epoch, all_training_epoch=all_training_epoch)
         else:
             print(f"The image datasource ({data_source_dir}) is not accessable")
     elif args.command == "detect":
