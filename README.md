@@ -3,7 +3,7 @@
 
 Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical model for cervical cancer screening.
 * References:
-    * Xueguang Li, Mingyue Du et al. AI model for cervical cancer screening and diagnosis using active learning strategy (submitted)
+    * Xueguang Li, Mingyue Du et al. Deep convolutional neural networks for cervical cancer screening and diagnosis using active learning strategy (submitted)
 
 ## 1. Environment Settings
 * Install Labelme  (https://github.com/wkentaro/labelme)
