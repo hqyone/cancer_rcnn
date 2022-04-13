@@ -7,3 +7,5 @@ code/model/*
 
 data/cc_tct_labeled_500_v1/
 data/logs/
+data/stage1_test/
+data/output/
