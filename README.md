@@ -1,4 +1,4 @@
-# AI model for cervical cancer screening and diagnosis 
+# Deep convolutional neural networks model for cervical cancer screening and diagnosis 
 ![Instance Segmentation Sample](title.jpg)
 
 Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical model for cervical cancer screening.
