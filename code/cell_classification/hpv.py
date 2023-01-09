@@ -99,6 +99,21 @@ VAL_IMAGE_IDS = [
 #     if i % 6 == 0:
 #         VAL_IMAGE_IDS.append(str(i))
 
+# See the reference : https://github.com/matterport/Mask_RCNN/issues/910
+# CLASS WEIGHTS. Class defination see line 191
+CLASS_WEIGHTS = { 
+    1:200, # ying
+    2:10,  # ying-yang
+    3:10   # yang 
+}
+
+def compute_class_weights(CLASS_WEIGHTS=CLASS_WEIGHTS):
+    mean = np.array(list(CLASS_WEIGHTS.values())).mean() # sum_class_occurence / nb_classes
+    max_weight = np.array(list(CLASS_WEIGHTS.values())).max()
+    CLASS_WEIGHTS.update((x, float(max_weight/(y))) for x, y in CLASS_WEIGHTS.items())
+    CLASS_WEIGHTS=dict(sorted(CLASS_WEIGHTS.items()))
+    return CLASS_WEIGHTS
+
 class NucleusConfig(Config):
     """Configuration for training on the nucleus segmentation dataset."""
     # Give the configuration a recognizable name
@@ -198,7 +213,6 @@ class NucleusDataset(utils.Dataset):
         info = self.image_info[image_id]
         # Get mask directory from image path
         mask_dir = os.path.join(os.path.dirname(info['path']),"masks")
-        print(str(mask_dir) +"xxxxx")
 
         # Read mask files from .png image
         mask = []
@@ -266,14 +280,18 @@ def train(model, config, head_training_epoch=720, all_training_epoch= 820):
                     learning_rate=config.LEARNING_RATE,
                     epochs=head_training_epoch,
                     augmentation=augmentation,
-                    layers='heads')
+                    layers='heads'
+                    class_weight=None #None
+                    )
 
         print("Train all layers")
         model.train(dataset_train, dataset_val,
                     learning_rate=config.LEARNING_RATE,
                     epochs=all_training_epoch,
                     augmentation=augmentation,
-                    layers='all')
+                    layers='all',
+                    class_weight=compute_class_weights() #None
+                    )
 
 
 ############################################################
@@ -364,7 +382,7 @@ def detect(model, dataset_dir, subset, out_dir=None):
         # picture = "D:\\Desktop\\hpv-test\\test\\xx_best_425_31_36.png"
         # image = skimage.io.imread(picture)
         starttime=time.clock()
-        #image = skimage.transform.resize(image, (1024, 1024), preserve_range=True)
+        image = skimage.transform.resize(image, (2048, 2048), preserve_range=True)
         #print("image.shape:", image.shape)
         # Detect objects
         r = model.detect([image], verbose=0)[0]
