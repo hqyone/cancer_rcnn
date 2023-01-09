@@ -1,4 +1,4 @@
-# AI model for cervical cancer screening and diagnosis 
+# Deep convolutional neural networks model for cervical cancer screening and diagnosis 
 ![Instance Segmentation Sample](title.jpg)
 
 Cervical cancer (CC) is the fourth most common malignant tumor among women worldwide. Here, we proposed a robust deep convolutional neural cervical model for cervical cancer screening.
@@ -36,6 +36,7 @@ CPU: i7-960@3.20GHz quad-core. Memory: 16GB. Graphics card: GeForce GTX 1080 Ti 
 *   [train.cfg](code/cell_classification/config/train.py) Config file for training model
 *   [predict.cfg](code/cell_classification/config/predict.py) Config file for predicting
 ### 4.2 patient classfication
+*   [crossvalidation.py](code/patient_classification/crossvalidation.py) Python code to run 10x cross valiation for all ML models (Random forest, Logistic regression, SVM)
 *   [patient_classifier.ipynb](code/patient_classification/patient_classifier.ipynb) Python notebook to make ML models (Random forest, Logistic regression, SVM)
 *   [xgbools.ipynb](code/cell_classification/script/xgbools.ipynb) Python notebook to make XGBoost model.
 
