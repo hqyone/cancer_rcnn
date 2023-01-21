@@ -13,7 +13,13 @@ from mrcnn import utils
 from mrcnn import visualize
 import matplotlib.pyplot as plt
 import glob
-import random 
+import random
+from mrcnn.model import load_image_gt
+from mrcnn.model import mold_image
+from mrcnn.utils import compute_ap, compute_recall
+from numpy import expand_dims
+from mrcnn import utils
+from statistics import mean
 
 import tensorflow as tf
 import keras
@@ -212,8 +218,7 @@ def predictImageToJson(image_path, model,  out_dir, class_names=['BG', 'yin', 'y
             title="Predictions")
     plt.savefig("{}/{}_label.jpg".format(out_dir, img_id))
 
-
-# The function is 
+# The function is converte json file for masks which are need by training data.
 def json2masks(img_file):
     img_dir, img_name, image_id = getFileNameInfor(img_file)
     json_file = f"{img_dir}/{image_id}.json"
@@ -242,7 +247,7 @@ def json2masks(img_file):
                         mask = boundary2Mask(xs, ys, img)
                         cv2.imwrite(f"{img_dir}/masks/{i}_{label}.png", mask)
 
-# Search all images in image_dir and use the model to do predict to get json file with image whichi is ready for labelme to read and edit
+# Search all images in image_dir and use the model to do predict to create the json files with image whichi is ready for labelme to read and edit
 def json2masksInDirectory(image_dir, ext="*.png"):
     for f in glob.glob(f'{image_dir}/**/{ext}', recursive=True):
         if "masks" not in f:
@@ -266,7 +271,7 @@ def getTrainValImageIDs(dataset_dir,val_number,ext="*.png"):
     # "train": use data from stage1_train minus the hard-coded list above
     # else: use the data from the specified sub-directory
     # assert subset in ["train", "val", "stage1_train", "stage1_test", "stage2_test"]
-    #subset_dir = "stage1_train" if subset in ["train", "val"] else subset
+    # subset_dir = "stage1_train" if subset in ["train", "val"] else subset
     val_Image_IDS=[]
     training_Image_IDS=[]
     Image_IDS=[]
@@ -279,3 +284,42 @@ def getTrainValImageIDs(dataset_dir,val_number,ext="*.png"):
     val_Image_IDS = random.choices(Image_IDS, k=val_number)
     training_Image_IDS = list(set(Image_IDS) - set(val_Image_IDS))
     return( training_Image_IDS, val_Image_IDS)
+
+from mrcnn.model import load_image_gt
+from mrcnn.model import mold_image
+from mrcnn.utils import compute_ap, compute_recall
+from numpy import expand_dims
+from mrcnn import utils
+from statistics import mean
+
+# You can change the iou_cutoff here, we used 0.5 as default.
+def evaluate_model(dataset, model, cfg, iou_cutoff=0.5):
+    APs = list()
+    ARs = list()
+    F1_scores = list()
+    for image_id in dataset.image_ids:
+        #image, image_meta, gt_class_id, gt_bbox, gt_mask = load_image_gt(dataset, cfg, image_id, use_mini_mask=False)
+        image, image_meta, gt_class_id, gt_bbox, gt_mask = load_image_gt(dataset, cfg, image_id)
+        scaled_image = mold_image(image, cfg)
+        sample = expand_dims(scaled_image, 0)
+        yhat = model.detect(sample, verbose=0)
+        r = yhat[0]
+        AP, precisions, recalls, overlaps = compute_ap(gt_bbox, gt_class_id, gt_mask, r["rois"], r["class_ids"], r["scores"], r['masks'],iou_threshold=iou_cutoff)
+        AR, positive_ids = compute_recall(r["rois"], gt_bbox, iou=iou_cutoff)
+        ARs.append(AR)
+        F1_scores.append((2* (mean(precisions) * mean(recalls)))/(mean(precisions) + mean(recalls))) #Method 1
+        APs.append(AP)
+    mAP = mean(APs)
+    mAR = mean(ARs)
+    return mAP, mAR, F1_scores
+
+
+def compare_json(gt_json, pred_json, class_labels=["yin",'yinyang','yang']):
+    """compare_json _summary_
+    The function is used to compare ground truth json with predicted json files
+    To got confusion matrix with multiple classes
+    Arguments:
+        gt_json {string} -- ground truth json file
+        pred_json {string} -- predict json file
+        class_labels{list} -- A list of all possible class names
+    """

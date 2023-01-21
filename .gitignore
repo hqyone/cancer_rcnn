@@ -9,3 +9,10 @@ data/cc_tct_labeled_500_v1/
 data/logs/
 data/stage1_test/
 data/output/
+data/output/
+data/50_35test
+data/500_Json
+data/patent_predict
+data/test_50_gt_json_image
+data/test_dataset
+data/training_data
