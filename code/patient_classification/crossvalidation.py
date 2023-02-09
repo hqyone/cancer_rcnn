@@ -20,7 +20,7 @@ from sklearn.model_selection import StratifiedKFold
 import numpy as np
 
 # Read the data for training and validation
-patient_data_dir = "../../data/patent_predict"
+patient_data_dir = "/home/hqyone/mnt/2tb/github/cancer_rcnn/data/patent_predict"
 
 mod1_yang_file = f"{patient_data_dir}/yang-211-model-T1.tsv"
 mod1_yin_file = f"{patient_data_dir}/yin-189-model-T1.tsv"
@@ -238,25 +238,179 @@ def CrossValidation(x, y, model_type, n_splits=10, seed=72):
         report_str+=f'{round(np.mean(total_test_npv),3)},{round(np.std(total_test_npv),3)}\t'
         report_str+=f'{round(np.mean(total_test_F1),3)},{round(np.std(total_test_F1),3)}'
 
-    return (report_str)
+        data_directory = {
+            "auc":total_test_auc_roc,
+            "ppv":total_test_ppv,
+            "npv":total_test_npv,
+            "accuracy":total_test_accuracy,
+            "specificity":total_test_specificity,
+            "sensitivity":total_test_sensitivity,
+            "F1":total_test_F1
+        }
+
+    return (report_str, data_directory)
 
 def runReg_CrossValidation(df,model_type,n_splits=10, seed=120):
     (x, y) =getXY(df)
     return(CrossValidation(x, y,model_type,n_splits, seed))
 
-
+from scipy import stats
 # possible methods : logistic, svm, randomforest, xgb
-#runReg_CrossValidation(mod1_df, "svm",seed=200)
-out_file="/home/hqyone/mnt/2tb/github/cancer_rcnn/data/output/patient_predict/summary_mod4.tsv"
-with open(out_file,'w') as OUT:
-    methods = ["logistic", "svm", "randomforest", "xgb"]
-    OUT.write("method\ttrain_auc_roc\ttrain_accuracy\ttest_auc_roc\taverage_precision\ttotal_test_accuracy\ttotal_test_specificity\ttotal_test_sensitivity\ttotal_test_precision\ttotal_test_recall\ttotal_test_ppv\ttotal_test_npv\ttotal_test_F1\n")
-    for method in methods:
-        OUT.write(method+"\t"+runReg_CrossValidation(mod4_df, method, n_splits=10, seed=200)+'\n')
+runReg_CrossValidation(mod1_df, "svm",seed=200)
 
-out_file="/home/hqyone/mnt/2tb/github/cancer_rcnn/data/output/patient_predict/summary_mod1.tsv"
-with open(out_file,'w') as OUT:
-    methods = ["logistic", "svm", "randomforest", "xgb"]
-    OUT.write("method\ttrain_auc_roc\ttrain_accuracy\ttest_auc_roc\taverage_precision\ttotal_test_accuracy\ttotal_test_specificity\ttotal_test_sensitivity\ttotal_test_precision\ttotal_test_recall\ttotal_test_ppv\ttotal_test_npv\ttotal_test_F1\n")
-    for method in methods:
-        OUT.write(method+"\t"+runReg_CrossValidation(mod1_df, method,n_splits=10, seed=200)+'\n')
+
+def get_performance_feature_dic(cell_classify_df, method_ls, out_file):
+    with open(out_file,'w') as OUT:
+        OUT.write("method\ttrain_auc_roc\ttrain_accuracy\ttest_auc_roc\taverage_precision\ttotal_test_accuracy\ttotal_test_specificity\ttotal_test_sensitivity\ttotal_test_precision\ttotal_test_recall\ttotal_test_ppv\ttotal_test_npv\ttotal_test_F1\n")
+        performance_feature_dic={}
+        for method in method_ls:
+            [report_str,data_directory] = runReg_CrossValidation(cell_classify_df, method,n_splits=10, seed=200)
+            performance_feature_dic[method] = data_directory
+            OUT.write(method+"\t"+report_str+'\n')
+    return performance_feature_dic
+
+
+def create_patient_predicton_testing_matrix(test_type, performance_feature_dic):
+    feature_ls = ["accuracy","specificity","sensitivity",'auc',"F1"]
+    comparison_pairs = [("xgb","svm"),("xgb","logistic"),("randomforest","svm"),("randomforest","logistic")]
+    result_dataframe =pd.DataFrame()
+    dic = {}
+    for comparison in comparison_pairs:
+        p_ls = []
+        for feature in feature_ls:
+            if test_type == "wilcoxon":
+                (state, p_val) = stats.wilcoxon(performance_feature_dic[comparison[0]][feature], performance_feature_dic[comparison[1]][feature], alternative='greater')
+            elif test_type =="t":
+                (state, p_val) = stats.ttest_ind(performance_feature_dic[comparison[0]][feature], performance_feature_dic[comparison[1]][feature], alternative='greater')
+            elif test_type == "mannwhitneyu":
+                (state, p_val) = stats.mannwhitneyu(performance_feature_dic[comparison[0]][feature], performance_feature_dic[comparison[1]][feature], alternative='greater')
+            p_ls.append(p_val)
+        dic["_".join(comparison)] = p_ls
+    result_df = pd.DataFrame.from_dict(dic)
+    result_df.index = feature_ls
+    return(result_df)
+
+def create_friedman_testing_matrix(test_type, performance_feature_dic):
+    feature_ls = ["accuracy","specificity","sensitivity",'auc',"F1"]
+    models = ["xgb","logistic","svm","randomforest"]
+    p_dic = {}
+    for feature in feature_ls:
+        (state, p_val) = stats.friedmanchisquare(performance_feature_dic[models[0]][feature], performance_feature_dic[models[1]][feature],
+                                                performance_feature_dic[models[2]][feature], performance_feature_dic[models[3]][feature])
+        p_dic[feature]=[p_val]
+    result_df = pd.DataFrame.from_dict(p_dic)
+    return(result_df)
+
+out_file="/home/hqyone/mnt/2tb/github/cancer_rcnn/data/output/patient_predict/summary_mod4.tsv"
+method_ls = ["logistic", "svm", "randomforest", "xgb"]
+# cell_classify_df = mod4_df
+cell_classify_df = mod1_df
+performance_feature_dic = get_performance_feature_dic(cell_classify_df, method_ls,out_file)
+p_df = create_patient_predicton_testing_matrix("wilcoxon",performance_feature_dic)
+print("--------------------wilcoxon-------------------")
+print(p_df)
+
+p_df = create_patient_predicton_testing_matrix("mannwhitneyu",performance_feature_dic)
+print("--------------------mannwhitneyu-------------------")
+print(p_df)
+
+
+p_df = create_friedman_testing_matrix("friedmanchisquare",performance_feature_dic)
+print("--------------------friedmanchisquare-------------------")
+print(p_df)
+
+
+
+
+# # Mann-Whitney U test
+# print(mod4_data_dic["xgb"]["sensitivity"])
+# print(mod4_data_dic["svm"]["sensitivity"])
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["accuracy"], mod4_data_dic["svm"]["accuracy"], alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["specificity"], mod4_data_dic["svm"]["specificity"], alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["sensitivity"], mod4_data_dic["svm"]["sensitivity"], alternative='greater'))
+# #print(stats.mannwhitneyu(mod4_data_dic["xgb"]["ppv"], mod4_data_dic["svm"]["ppv"], alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["npv"], mod4_data_dic["svm"]["npv"], alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"],alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["F1"], mod4_data_dic["logistic"]["F1"],alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"],alternative='greater'))
+# # wilcoxon
+# print("########################### xgb #############################")
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["accuracy"], mod4_data_dic["svm"]["accuracy"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["specificity"], mod4_data_dic["svm"]["specificity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["sensitivity"], mod4_data_dic["svm"]["sensitivity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["auc"], mod4_data_dic["svm"]["auc"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"], alternative='greater'))
+
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["accuracy"], mod4_data_dic["logistic"]["accuracy"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["specificity"], mod4_data_dic["logistic"]["specificity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["sensitivity"], mod4_data_dic["logistic"]["sensitivity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["auc"], mod4_data_dic["logistic"]["auc"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["F1"], mod4_data_dic["logistic"]["F1"], alternative='greater'))
+
+# print("########################### randomforest #############################")
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["accuracy"], mod4_data_dic["svm"]["accuracy"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["specificity"], mod4_data_dic["svm"]["specificity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["sensitivity"], mod4_data_dic["svm"]["sensitivity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["auc"], mod4_data_dic["svm"]["auc"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["F1"], mod4_data_dic["svm"]["F1"], alternative='greater'))
+
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["accuracy"], mod4_data_dic["logistic"]["accuracy"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["specificity"], mod4_data_dic["logistic"]["specificity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["sensitivity"], mod4_data_dic["logistic"]["sensitivity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["auc"], mod4_data_dic["logistic"]["auc"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["F1"], mod4_data_dic["logistic"]["F1"], alternative='greater'))
+
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["specificity"], mod4_data_dic["svm"]["specificity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["sensitivity"], mod4_data_dic["svm"]["sensitivity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["auc"], mod4_data_dic["svm"]["auc"], alternative='greater'))
+
+
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["F1"], mod4_data_dic["svm"]["F1"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["F1"], mod4_data_dic["logistic"]["F1"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["F1"], mod4_data_dic["logistic"]["F1"], alternative='greater'))
+
+# # t-test
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["specificity"], mod4_data_dic["svm"]["specificity"]))
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["auc"], mod4_data_dic["svm"]["auc"]))
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"]))
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["F1"], mod4_data_dic["logistic"]["F1"]))
+
+
+
+
+# out_file="/home/hqyone/mnt/2tb/github/cancer_rcnn/data/output/patient_predict/summary_mod1.tsv"
+# with open(out_file,'w') as OUT:
+#     methods = ["logistic", "svm", "randomforest", "xgb"]
+#     OUT.write("method\ttrain_auc_roc\ttrain_accuracy\ttest_auc_roc\taverage_precision\ttotal_test_accuracy\ttotal_test_specificity\ttotal_test_sensitivity\ttotal_test_precision\ttotal_test_recall\ttotal_test_ppv\ttotal_test_npv\ttotal_test_F1\n")
+    
+#     mod4_data_dic={}
+#     for method in methods:
+#         [report_str,data_directory] = runReg_CrossValidation(mod1_df, method,n_splits=10, seed=200)
+#         mod4_data_dic[method] = data_directory
+#         OUT.write(method+"\t"+report_str+'\n')
+
+# print(mod4_data_dic["xgb"]["sensitivity"])
+# print(mod4_data_dic["svm"]["sensitivity"])
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["specificity"], mod4_data_dic["svm"]["specificity"], alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["sensitivity"], mod4_data_dic["svm"]["sensitivity"], alternative='greater'))
+# #print(stats.mannwhitneyu(mod4_data_dic["xgb"]["ppv"], mod4_data_dic["svm"]["ppv"], alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["npv"], mod4_data_dic["svm"]["npv"], alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"],alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["F1"], mod4_data_dic["logistic"]["F1"],alternative='greater'))
+# print(stats.mannwhitneyu(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"],alternative='greater'))
+
+# # wilcoxon
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["specificity"], mod4_data_dic["svm"]["specificity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["sensitivity"], mod4_data_dic["svm"]["sensitivity"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["auc"], mod4_data_dic["svm"]["auc"], alternative='greater'))
+
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["F1"], mod4_data_dic["svm"]["F1"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["xgb"]["F1"], mod4_data_dic["logistic"]["F1"], alternative='greater'))
+# print(stats.wilcoxon(mod4_data_dic["randomforest"]["F1"], mod4_data_dic["logistic"]["F1"], alternative='greater'))
+
+# # t-test
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["specificity"], mod4_data_dic["svm"]["specificity"]))
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["auc"], mod4_data_dic["svm"]["auc"]))
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["F1"], mod4_data_dic["svm"]["F1"]))
+# print(stats.ttest_ind(mod4_data_dic["xgb"]["F1"], mod4_data_dic["logistic"]["F1"]))
