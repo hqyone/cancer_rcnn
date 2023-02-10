@@ -272,18 +272,23 @@ def get_performance_feature_dic(cell_classify_df, method_ls, out_file):
 
 def create_patient_predicton_testing_matrix(test_type, performance_feature_dic):
     feature_ls = ["accuracy","specificity","sensitivity",'auc',"F1"]
-    comparison_pairs = [("xgb","svm"),("xgb","logistic"),("randomforest","svm"),("randomforest","logistic")]
+    comparison_pairs = [("xgb","svm"),("xgb","logistic"),("randomforest","svm"),("randomforest","logistic"),("xgb","randomforest"),("svm","logistic")]
     result_dataframe =pd.DataFrame()
     dic = {}
     for comparison in comparison_pairs:
         p_ls = []
         for feature in feature_ls:
-            if test_type == "wilcoxon":
-                (state, p_val) = stats.wilcoxon(performance_feature_dic[comparison[0]][feature], performance_feature_dic[comparison[1]][feature], alternative='greater')
-            elif test_type =="t":
-                (state, p_val) = stats.ttest_ind(performance_feature_dic[comparison[0]][feature], performance_feature_dic[comparison[1]][feature], alternative='greater')
-            elif test_type == "mannwhitneyu":
-                (state, p_val) = stats.mannwhitneyu(performance_feature_dic[comparison[0]][feature], performance_feature_dic[comparison[1]][feature], alternative='greater')
+            values_1=performance_feature_dic[comparison[0]][feature]
+            values_2=performance_feature_dic[comparison[1]][feature]
+            if sum(values_1)-sum(values_2)==0:
+                p_val =1
+            else:
+                if test_type == "wilcoxon":
+                    (state, p_val) = stats.wilcoxon(values_1, values_2, alternative='greater')
+                elif test_type =="t":
+                    (state, p_val) = stats.ttest_ind(values_1, values_2, alternative='greater')
+                elif test_type == "mannwhitneyu":
+                    (state, p_val) = stats.mannwhitneyu(values_1, values_2, alternative='greater')
             p_ls.append(p_val)
         dic["_".join(comparison)] = p_ls
     result_df = pd.DataFrame.from_dict(dic)
