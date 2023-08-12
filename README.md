@@ -15,7 +15,7 @@ CPU: i7-960@3.20GHz quad-core. Memory: 16GB. Graphics card: GeForce GTX 1080 Ti 
 
 ## 2. Training Data
 * 500 TCT manually labelled images (200X magnification) which contains at least one cancer cell 
-[500_tct_labeled_images (827M)]([https://drive.google.com/file/d/1aZbHQPZNfuQo9IDXN_oquqDwx1uWVJcm/view?usp=drive_link](https://drive.google.com/file/d/1E3RaBXjTy-TdiyhjioSZyuYoHz5tAwW2/view?usp=drive_link)) 
+[500_tct_labeled_images (827M)](https://drive.google.com/file/d/1E3RaBXjTy-TdiyhjioSZyuYoHz5tAwW2/view?usp=drive_link) 
 * 400 TCT whole slide images (WSI) (~800000 images) are avaliable from the corresponding authors on reasonable request
 * [yang-211-model-1.tsv](data/patent_predict/yang-211-model-T1.tsv) The cell type prediction results of T1 model for 211 cancer patients
 * [yin-189-model-T1.tsv](data/patent_predict/yin-189-model-T1.tsv) The cell type prediction results of T1 model for 189 normal patients
